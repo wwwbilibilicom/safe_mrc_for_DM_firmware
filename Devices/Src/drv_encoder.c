@@ -44,6 +44,50 @@ int drv_encoder_init(Device_encoder_t *Encoder_dev, TIM_HandleTypeDef *Encoder_t
     return 1;
 }
 
+void Encoder_Reset_Zero(Device_encoder_t *Encoder_dev)
+{
+    // Set current position as zero reference
+    Encoder_dev->zero_offset = Encoder_dev->raw_angle;
+	Encoder_dev->round_count = 0;
+	Encoder_dev->raw_continuous_angle = 0.0f;
+
+	// Align previous angle to current to avoid a large delta at next update
+	Encoder_dev->previous_raw_angle = Encoder_dev->raw_angle;
+
+	// Reset filtered position
+	Encoder_dev->filtered_angle = 0.0f;
+
+	// Reset velocity related states
+	Encoder_dev->AngularVelocity = 0.0f;
+	Encoder_dev->filtered_anguvel = 0.0f;
+	Encoder_dev->PreviousEncoderValRad = 0.0f;
+	Encoder_dev->CurrentEncoderValRad = 0.0f;
+
+	// Reset timebase to current to ensure positive delta time next cycle
+	Encoder_dev->PreviousSampleTime = Encoder_dev->CurrentSampleTime = getHighResTime_ns();
+
+	// Clear low pass filter state
+	Encoder_dev->lowPassFilter.prev = 0.0f;
+	Encoder_dev->lowPassFilter.has_prev = 0;
+
+	// Clear band-pass filter internal states
+	Encoder_dev->bandPassFilter.highPassFilter.x1 = 0.0f;
+	Encoder_dev->bandPassFilter.highPassFilter.y1 = 0.0f;
+	Encoder_dev->bandPassFilter.lowPassFilter.x1 = 0.0f;
+	Encoder_dev->bandPassFilter.lowPassFilter.y1 = 0.0f;
+
+	// Reset moving average filter state and buffer (if available)
+	Encoder_dev->movingAverage.index = 0;
+	Encoder_dev->movingAverage.fill = 0;
+	Encoder_dev->movingAverage.sum = 0.0f;
+	Encoder_dev->movingAverage.filtered = 0.0f;
+	if (Encoder_dev->movingAverage.buffer && Encoder_dev->movingAverage.size > 0) {
+		for (uint16_t i = 0; i < Encoder_dev->movingAverage.size; ++i) {
+			Encoder_dev->movingAverage.buffer[i] = 0.0f;
+		}
+	}
+}
+
 static void Encoder_SPI_CalibrateZero(Device_encoder_t *Encoder_dev) {
     float sum = 0;
     for (int i = 0; i < 1000; ++i) {

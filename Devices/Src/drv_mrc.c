@@ -293,6 +293,14 @@ void MRC_Com_Process(Device_MRC_t *MRC)
                     {
                         MRC->des_coil_current = ((float)MRC->com.cmd_msg.des_coil_current) / 1000.0f;
                     }
+                    else if (MRC->com.cmd_msg.mode == MRC_RESET)
+                    {
+                        HAL_NVIC_SystemReset();
+                    }
+                    else if (MRC->com.cmd_msg.mode == ZERO)
+                    {
+                        
+                    }
                 }
             }
         }

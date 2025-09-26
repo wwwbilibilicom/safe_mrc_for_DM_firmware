@@ -12,6 +12,7 @@
 #include "mrc_protocol.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include "main.h"
 
 // State machine context for MRC
 #pragma pack(1)

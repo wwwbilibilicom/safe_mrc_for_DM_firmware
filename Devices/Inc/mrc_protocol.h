@@ -21,7 +21,10 @@ typedef enum MRC_Mode
     FREE,
     FIX_LIMIT,
     ADAPTATION,
-    DEBUG
+    DEBUG,
+    MRC_RESET,
+    ZERO,
+    REFRESH
 } MRC_Mode;
 
 #pragma pack(1)

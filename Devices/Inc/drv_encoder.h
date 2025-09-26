@@ -149,6 +149,8 @@ extern "C"
 
     void Encoder_SPI_ExchangeData(Device_encoder_t *Encoder_dev);
 
+    void Encoder_Reset_Zero(Device_encoder_t *Encoder_dev);
+
 //    uint32_t getCurrentTime(void);
 //    uint64_t getHighResTime_ns(void);
 

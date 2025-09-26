@@ -206,7 +206,7 @@ class SerialThread(QtCore.QThread):
 # Main Application Window
 # -----------------------------
 class MainWindow(QtWidgets.QMainWindow):
-    MODES = {0: 'FREE', 1: 'FIX_LIMIT', 2: 'ADAPTATION', 3: 'DEBUG'}
+    MODES = {0: 'FREE', 1: 'FIX_LIMIT', 2: 'ADAPTATION', 3: 'DEBUG', 4: 'MRC_RESET', 5: 'ZERO', 6: 'REFRESH'}
     def __init__(self):
         super().__init__()
         self.setWindowTitle('SafeMRC Host UI')
