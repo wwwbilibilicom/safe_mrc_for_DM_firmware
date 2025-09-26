@@ -1,0 +1,6 @@
+MDK-ARM/safeMRC_for_DM_firmware
+MDK-ARM/.vscode
+.vscode
+scripts/__pycache__
+scripts/build
+scripts/data/
