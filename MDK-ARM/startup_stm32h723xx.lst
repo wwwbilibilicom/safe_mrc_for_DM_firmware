@@ -1263,13 +1263,12 @@ ARM Macro Assembler    Page 20
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M7.fp.dp --apcs=
 interwork --depend=safemrc_for_dm_firmware\startup_stm32h723xx.d -osafemrc_for_
-dm_firmware\startup_stm32h723xx.o -IG:\lab\project\MRF_Bearing_Lock\embeded_cod
-e\safeMRC_for_DM_firmware\MDK-ARM\RTE -I"D:\Program Files\Keil_v5\ARM\PACK\ARM\
-CMSIS\4.5.0\CMSIS\Include" -I"D:\Program Files\Keil_v5\ARM\PACK\Keil\STM32H7xx_
-DFP\3.1.1\Drivers\CMSIS\Device\ST\STM32H7xx\Include" --predefine="__MICROLIB SE
-TA 1" --predefine="__UVISION_VERSION SETA 518" --predefine="_RTE_ SETA 1" --pre
-define="STM32H723xx SETA 1" --list=startup_stm32h723xx.lst startup_stm32h723xx.
-s
+dm_firmware\startup_stm32h723xx.o -I.\RTE\_safeMRC_for_DM_firmware -I"C:\Progra
+m Files\Keil_v5\Arm\Packs\ARM\CMSIS\5.7.0\CMSIS\Core\Include" -I"C:\Program Fil
+es\Keil_v5\Arm\Packs\Keil\STM32H7xx_DFP\2.7.0\Drivers\CMSIS\Device\ST\STM32H7xx
+\Include" --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA 5
+34" --predefine="_RTE_ SETA 1" --predefine="STM32H723xx SETA 1" --predefine="_R
+TE_ SETA 1" --list=startup_stm32h723xx.lst startup_stm32h723xx.s
 
 
 

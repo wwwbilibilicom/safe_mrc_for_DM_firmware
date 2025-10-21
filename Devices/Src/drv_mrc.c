@@ -284,6 +284,7 @@ void MRC_Com_Process(Device_MRC_t *MRC)
         if(MRC->com.cmd_msg.id == MRC->com.id){
             // Unpack and validate command message from DMA buffer
             if (MRC_Com_UnpackCmd(&MRC->com) == 0) {
+                getFreq(&MRC->main_loop_freq_calculateor);
                 // Update device parameters from received command
                 if(MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 0)
                 {
@@ -299,7 +300,7 @@ void MRC_Com_Process(Device_MRC_t *MRC)
                     }
                     else if (MRC->com.cmd_msg.mode == ZERO)
                     {
-                        
+                        Encoder_Reset_Zero(&MRC->Encoder);
                     }
                 }
             }

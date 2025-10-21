@@ -88,6 +88,9 @@ typedef enum {
         MRC_StateMachine_t statemachine; // MRC state machine instance for mode management and safety
 
         uint16_t print_count;
+
+        Caculate_Freq_t main_loop_freq_calculateor;
+
     } Device_MRC_t;
 #pragma pack()
 

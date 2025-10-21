@@ -153,6 +153,7 @@ int main(void)
       // {
       //   Encoder_Calibrate_n_Filter(&MRC.Encoder);
       // }
+      
       MRC_Com_Process(&MRC);
       Encoder_Calibrate_n_Filter(&MRC.Encoder);
       //MRC_collision_detect(&MRC);
