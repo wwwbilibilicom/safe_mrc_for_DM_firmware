@@ -10,6 +10,7 @@
 #include "crc_ccitt.h"
 #include <string.h>
 #include "stdio.h"
+#include "rs485.h"
 
 // Protocol constant definitions
 #define MRC_HEAD_HIGH    0xFE
@@ -39,6 +40,7 @@ int MRC_Com_Init(MRC_Com_t *mrc_com, UART_HandleTypeDef *huart, uint8_t id)
     
     // Clear DMA receive structure (since DMA receives directly into cmd_msg)
     memset((uint8_t*)&mrc_com->cmd_msg, 0, mrc_com->RxLen);
+    mrc_com->cmd_buffer_len = MRC_CMD_MSG_BUFFER_SIZE;
     memset(mrc_com->cmd_msg_buffer, 0, MRC_CMD_MSG_BUFFER_SIZE);
     
     // Initialize feedback protocol structure
@@ -60,12 +62,12 @@ int MRC_Com_Init(MRC_Com_t *mrc_com, UART_HandleTypeDef *huart, uint8_t id)
 
 void MRC_Com_Tx_Enable(void)
 {
-    HAL_GPIO_WritePin(USART2_DE_GPIO_Port, USART2_DE_Pin, GPIO_PIN_SET);
+    RS485_Tx_Enable();
 }
 
 void MRC_Com_Rx_Enable(void)
 {
-    HAL_GPIO_WritePin(USART2_DE_GPIO_Port, USART2_DE_Pin, GPIO_PIN_RESET);
+    RS485_Rx_Enable();
 }
 
 

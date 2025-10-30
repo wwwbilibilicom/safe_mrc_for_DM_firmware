@@ -284,19 +284,27 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance == USART2)
+  {
+    RS485_HandleUartError(huart, MRC.com.cmd_msg_buffer, MRC.com.cmd_buffer_len);
+  }
+}
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
   if (huart->Instance == USART2)
   {
     /* Clear ORE/FE first */
-    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET)
-    {
-      __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);
-    }
-    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE) != RESET)
-    {
-      __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);
-    }
+    // if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE) != RESET)
+    // {
+    //   __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);
+    // }
+    // if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE) != RESET)
+    // {
+    //   __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);
+    // }
 
     if(huart->RxEventType == HAL_UART_RXEVENT_IDLE)
     {

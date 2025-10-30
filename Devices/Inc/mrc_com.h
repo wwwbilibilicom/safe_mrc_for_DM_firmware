@@ -17,6 +17,7 @@ extern "C"
 #include "main.h"
 #include "mrc_protocol.h"
 #include "sys_clock.h"
+#include "rs485_error_handler.h"
 
 #define MRC_CMD_MSG_BUFFER_SIZE 256
 
@@ -27,6 +28,7 @@ extern "C"
 
         MRC_Cmd_Protocol cmd_msg; // Command message structure
         uint8_t cmd_msg_buffer[MRC_CMD_MSG_BUFFER_SIZE]; // DMA buffer for command message
+        uint16_t cmd_buffer_len; // Length of the command message
         MRC_Fbk_Protocol fbk_msg; // Feedback message structure
 
         UART_HandleTypeDef *mrc_huart; // UART handle for communication

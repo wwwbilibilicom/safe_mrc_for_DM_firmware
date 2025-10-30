@@ -443,6 +443,16 @@
               <FileType>1</FileType>
               <FilePath>..\Devices\Src\mrc_statemachine.c</FilePath>
             </File>
+            <File>
+              <FileName>rs485_error_handler.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Devices\Src\rs485_error_handler.c</FilePath>
+            </File>
+            <File>
+              <FileName>rs485.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Devices\Src\rs485.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -254,6 +254,7 @@ void MRC_send_data(Device_MRC_t *MRC)
         MRC->com.tx_time = getHighResTime_ns();
         MRC->com.time_delay = (float)(MRC->com.tx_time - MRC->com.rx_time)/1000.0f;
     }
+		getFreq(&MRC->main_loop_freq_calculateor);
 }
 
 int8_t MRC_SetMode(Device_MRC_t *mrc, MRC_Mode mode)
@@ -284,7 +285,7 @@ void MRC_Com_Process(Device_MRC_t *MRC)
         if(MRC->com.cmd_msg.id == MRC->com.id){
             // Unpack and validate command message from DMA buffer
             if (MRC_Com_UnpackCmd(&MRC->com) == 0) {
-                getFreq(&MRC->main_loop_freq_calculateor);
+                
                 // Update device parameters from received command
                 if(MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 0)
                 {
@@ -292,7 +293,9 @@ void MRC_Com_Process(Device_MRC_t *MRC)
                     MRC_SetMode(MRC, MRC->com.cmd_msg.mode);
                     if(MRC->com.cmd_msg.mode == FIX_LIMIT || MRC->com.cmd_msg.mode == ADAPTATION)
                     {
+                        getFreq(&MRC->com_loop_freq_calculateor);
                         MRC->des_coil_current = ((float)MRC->com.cmd_msg.des_coil_current) / 1000.0f;
+                        //printf("[USART 1]: %.2f, %.2f\n", MRC->des_coil_current, MRC->filtered_coil_current);
                     }
                     else if (MRC->com.cmd_msg.mode == MRC_RESET)
                     {
