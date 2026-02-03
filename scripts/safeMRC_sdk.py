@@ -8,7 +8,7 @@ import serial.tools.list_ports
 import sys
 import os
 
-SAFEMRC_MODES = {0: 'FREE', 1: 'FIX_LIMIT', 2: 'ADAPTATION', 3: 'DEBUG'}
+SAFEMRC_MODES = {0: 'FREE', 1: 'FIX_LIMIT', 2: 'ADAPTATION', 3: 'DEBUG', 4: 'MRC_RESET', 5: 'ZERO', 6: 'REFRESH'}
 SAFEMRC_BAUDRATE = 4000000  
 DEFAULT_DEVICE_ID = 1
 DEFAULT_CURRENT = 0.0

@@ -140,7 +140,8 @@ void MRC_Init(const uint8_t *dev_name, Device_MRC_t *MRC, uint8_t id)
     // MRC_StateMachine_SetMode(&MRC->statemachine, FIX_LIMIT, MRC->filtered_coil_current);
     MRC_SetMode(MRC, FIX_LIMIT);
 
-    led_on(&MRC->LED1); // Turn on LED2
+    MRC_state_led_ready_on(MRC);
+
     printf("Device MRC(%s %d) initialized successfully!\n", dev_name, id);
 
     MRC_StateMachine_Init(&MRC->statemachine);
@@ -151,6 +152,16 @@ void MRC_Init(const uint8_t *dev_name, Device_MRC_t *MRC, uint8_t id)
         printf("MRC communication initialization failed!\n");
         return;
     }
+}
+
+void MRC_state_led_alert_on(Device_MRC_t *MRC) {
+    led_on(&MRC->LED2);
+    led_off(&MRC->LED1);
+}
+
+void MRC_state_led_ready_on(Device_MRC_t *MRC) {
+    led_on(&MRC->LED1);
+    led_off(&MRC->LED2);
 }
 
 /**
@@ -206,7 +217,7 @@ void MRC_set_voltage(Device_MRC_t *MRC)
 void MRC_collision_detect(Device_MRC_t *MRC)
 {
     float index = fabsf(MRC->Encoder.filtered_anguvel);
-    if(!(MRC->COLLISION_REACT_FLAG))          // Non-collision state
+    if(!(MRC->COLLISION_REACT_FLAG)&&MRC->statemachine.current_mode != FREE)          // Non-collision state
     {
         if(index < MRC->collision_threshold)                   // Below threshold, no collision
         {
@@ -216,26 +227,19 @@ void MRC_collision_detect(Device_MRC_t *MRC)
         {
             MRC_StateMachine_OnCollisionDetected(&MRC->statemachine, MRC->filtered_coil_current);
             MRC->COLLISION_REACT_FLAG = 1;
-            led_on(&MRC->LED2);
+            MRC_state_led_alert_on(MRC);
             printf("Collision detected!\n");
             return;
         }
     }
-    else if(MRC->COLLISION_REACT_FLAG)     // Collision state
-    {
-        if(index >= index < MRC->collision_threshold)                  // Above threshold, collision not ended
-        {
-            return;
-        }
-        else                                    // Collision ended, relock MRC
-        {
-            MRC_StateMachine_OnCollisionEnded(&MRC->statemachine, MRC->filtered_coil_current);
-            MRC->COLLISION_REACT_FLAG = 0;
-            led_off(&MRC->LED2);
-            printf("Collision ended!\n");
-            return;
-        }
-    }
+}
+
+void MRC_recover_from_collision(Device_MRC_t *MRC)
+{
+    MRC_StateMachine_OnCollisionEnded(&MRC->statemachine, MRC->filtered_coil_current);
+    MRC->COLLISION_REACT_FLAG = 0;
+    MRC_state_led_ready_on(MRC);
+    printf("Recovered from collision!\n");
 }
 
 void MRC_send_data(Device_MRC_t *MRC)
@@ -297,14 +301,19 @@ void MRC_Com_Process(Device_MRC_t *MRC)
                         MRC->des_coil_current = ((float)MRC->com.cmd_msg.des_coil_current) / 1000.0f;
                         //printf("[USART 1]: %.2f, %.2f\n", MRC->des_coil_current, MRC->filtered_coil_current);
                     }
-                    else if (MRC->com.cmd_msg.mode == MRC_RESET)
-                    {
-                        HAL_NVIC_SystemReset();
-                    }
                     else if (MRC->com.cmd_msg.mode == ZERO)
                     {
                         Encoder_Reset_Zero(&MRC->Encoder);
                     }
+                }
+                if(MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 1)
+                {
+                    if (MRC->com.cmd_msg.mode == MRC_RESET)
+                    {
+                        //HAL_NVIC_SystemReset();
+                        MRC_recover_from_collision(MRC);
+                    }
+
                 }
             }
         }

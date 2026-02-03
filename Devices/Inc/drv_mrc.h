@@ -123,6 +123,14 @@ typedef enum {
      * @note Detect collision by comparing states of the MRC device
      */
     void MRC_collision_detect(Device_MRC_t *MRC);
+
+    /**
+     * @brief Recover from collision state
+     * @param MRC MRC device structure pointer
+     * 
+     * @note Reset collision flag and update LED indicators
+     */
+    void MRC_recover_from_collision(Device_MRC_t *MRC);
     
     /**
      * @brief MRC communication process using new mrc_com module
@@ -182,6 +190,10 @@ typedef enum {
     int8_t MRC_SetMode(Device_MRC_t *mrc, MRC_Mode mode);
 
     void MRC_send_data(Device_MRC_t *MRC);
+
+    void MRC_state_led_alert_on(Device_MRC_t *MRC);
+
+    void MRC_state_led_ready_on(Device_MRC_t *MRC);
 
 /**
  * @brief Lookup table entry for target-to-measured voltage compensation
