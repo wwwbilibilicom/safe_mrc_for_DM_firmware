@@ -18,6 +18,10 @@ extern "C" {
 // Second-to-last sector base: 0x080C_0000.
 #define FLASH_RES_ADDRESS ((uint32_t)0x080C0000U)
 
+// Reserve the third-to-last sector for collision threshold (float).
+// Third-to-last sector base: 0x080A_0000.
+#define FLASH_COLLISION_THRESHOLD_ADDRESS ((uint32_t)0x080A0000U)
+
 void flash_read(uint32_t address, uint8_t *data, uint32_t size);
 void flash_write(uint32_t address, uint8_t *data, uint32_t size);
 void flash_erase(uint32_t address, uint32_t size);

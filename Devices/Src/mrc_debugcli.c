@@ -25,6 +25,8 @@ volatile uint16_t usart1_rx_index = 0;
 #define DEBUGCLI_CURRENT_MAX    5.0f
 #define DEBUGCLI_ID_MIN         0
 #define DEBUGCLI_ID_MAX         15
+#define DEBUGCLI_THRESHOLD_MIN  0.1f
+#define DEBUGCLI_THRESHOLD_MAX  10.0f
 
 void MRC_DebugCLI_Parse(const char *cmd_str, Device_MRC_t *mrc) {
     if (!cmd_str || !mrc || strlen(cmd_str) == 0) return;
@@ -187,6 +189,28 @@ void MRC_DebugCLI_Parse(const char *cmd_str, Device_MRC_t *mrc) {
         } else {
             printf("[USART1] Unknown RES command. Use: RES CHECK | RES CHANGE <ohm>\n");
         }
+    } else if (strcmp(cmd, "THRESHOLD") == 0) {
+        if (strcmp(arg1, "CHECK") == 0) {
+            printf("[USART1] Collision threshold: %.2f\n", mrc->collision_threshold);
+        } else if (strcmp(arg1, "CHANGE") == 0) {
+            if (n < 3) {
+                printf("[USART1] THRESHOLD CHANGE requires a value. Usage: THRESHOLD CHANGE <value>\n");
+                return;
+            }
+            float new_threshold = strtof(arg2, NULL);
+            if (new_threshold < DEBUGCLI_THRESHOLD_MIN || new_threshold > DEBUGCLI_THRESHOLD_MAX) {
+                printf("[USART1] Invalid threshold value. Allowed: %.1f~%.1f\n", DEBUGCLI_THRESHOLD_MIN, DEBUGCLI_THRESHOLD_MAX);
+                return;
+            }
+            float old_threshold = mrc->collision_threshold;
+            mrc->collision_threshold = new_threshold;
+            // Persist as float (4 bytes) to dedicated sector
+            flash_erase(FLASH_COLLISION_THRESHOLD_ADDRESS, 4U);
+            flash_write(FLASH_COLLISION_THRESHOLD_ADDRESS, (uint8_t*)&new_threshold, sizeof(float));
+            printf("[USART1] Collision threshold changed: %.2f -> %.2f (saved)\n", old_threshold, new_threshold);
+        } else {
+            printf("[USART1] Unknown THRESHOLD command. Use: THRESHOLD CHECK | THRESHOLD CHANGE <value>\n");
+        }
     } else {
         printf("[USART1] Unknown command: %s\n", cmd);
     }
@@ -216,6 +240,10 @@ void MRC_DebugCLI_Print_Help_Menu(void)
     printf("Coil resistance:\n");
     printf("  RES CHECK                 Print coil resistance (Ohm)\n");
     printf("  RES CHANGE <ohm>          Set coil resistance (0.01 ~ 10.0 Ohm, persist)\n");
+    printf("\n");
+    printf("Collision threshold (DEBUG mode only):\n");
+    printf("  THRESHOLD CHECK           Print collision threshold\n");
+    printf("  THRESHOLD CHANGE <v>      Set collision threshold (%.1f ~ %.1f, persist)\n", DEBUGCLI_THRESHOLD_MIN, DEBUGCLI_THRESHOLD_MAX);
 }
 
 void MRC_DebugCLI_Init(UART_HandleTypeDef *huart) {

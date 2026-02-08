@@ -37,7 +37,7 @@ uint32_t ADC_BUFFER[1]; // Buffer for ADC test
 #define COIL_PID_MAX_OUT 12.0f
 #define COIL_PID_MIN_OUT -12.0f
 //collison detection
-#define COLLISION_THRESHOLD 2.0f
+#define DEFAULT_COLLISION_THRESHOLD 2.0f
 
 #define DEFAULT_MAX_COIL_CURRENT 5.0f
 
@@ -97,7 +97,30 @@ void MRC_Init(const uint8_t *dev_name, Device_MRC_t *MRC, uint8_t id)
     MRC->state_phase = Disengagement;
 
     MRC->COLLISION_REACT_FLAG = 0;  //collision react
-    MRC->collision_threshold = COLLISION_THRESHOLD; //collision threshold
+
+    // Load collision threshold from Flash (similar to coil_resistance)
+    float threshold_tmp = 0.0f;
+    uint32_t threshold_raw = *(volatile const uint32_t*)FLASH_COLLISION_THRESHOLD_ADDRESS;
+    if (threshold_raw == 0xFFFFFFFFU) {
+        // First boot / never written: use default and save to Flash
+        MRC->collision_threshold = DEFAULT_COLLISION_THRESHOLD;
+        flash_erase(FLASH_COLLISION_THRESHOLD_ADDRESS, 4U);
+        flash_write(FLASH_COLLISION_THRESHOLD_ADDRESS, (uint8_t*)&MRC->collision_threshold, sizeof(float));
+        printf("Collision threshold defaulted to %.2f (saved)\n", MRC->collision_threshold);
+    } else {
+        // Already written: read from Flash and validate
+        flash_read(FLASH_COLLISION_THRESHOLD_ADDRESS, (uint8_t*)&threshold_tmp, sizeof(float));
+        if (threshold_tmp >= 0.1f && threshold_tmp <= 10.0f) {
+            MRC->collision_threshold = threshold_tmp;
+            printf("Collision threshold loaded: %.2f\n", MRC->collision_threshold);
+        } else {
+            // Invalid value: reset to default and overwrite Flash
+            MRC->collision_threshold = DEFAULT_COLLISION_THRESHOLD;
+            flash_erase(FLASH_COLLISION_THRESHOLD_ADDRESS, 4U);
+            flash_write(FLASH_COLLISION_THRESHOLD_ADDRESS, (uint8_t*)&MRC->collision_threshold, sizeof(float));
+            printf("Collision threshold invalid, reset to default %.2f (saved)\n", MRC->collision_threshold);
+        }
+    }
 
     HAL_TIM_Base_Start_IT(&htim6); // timer for key
 
