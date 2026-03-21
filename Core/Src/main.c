@@ -137,6 +137,7 @@ int main(void)
     {
       MRC.control_loop_flag = 0;
       MRC_StateMachine_Task1ms(&MRC.statemachine);
+      printf("a, ,b, c: %.3f, %.3f, %.3f\n", MRC.filtered_coil_current, MRC.des_coil_current, MRC.com.fbk_msg.present_current);
       // printf("Actual coil current, filtered coil current: %.3f, %.3f\n", MRC.actual_coil_current, MRC.filtered_coil_current);
       //      MRC.print_count++;
       //      if(MRC.print_count == 1000)
@@ -145,18 +146,18 @@ int main(void)
         //        printf("angle1, angle2, freq: %.6f, %.6f, %.1f\n", MRC.Encoder.raw_continuous_angle, MRC.Encoder.filtered_angle, MRC.Encoder.real_freq);
         //      }
         // printf("Coil current, AnglarVelocity, Encoder postion(deg) and filtered_angle(deg) with period and high_time: %.3f, %.3f, %.3f, %.3f, %d, %d\n", MRC.actual_coil_current, MRC.Encoder.AngularVelocity, MRC.Encoder.raw_angle, MRC.Encoder.filtered_angle, MRC.Encoder.Encoder_Duty.Period, MRC.Encoder.Encoder_Duty.HighTime);
-        MRC_CoilCurrentControl_Update(&MRC);
       }
-    if(MRC.coil_current_update_flag == 1) // 10kHZ coil current update
-    {
-      // if(MRC.Encoder.Encoder_Duty.CapFlag == 1)
-      // {
-      //   Encoder_Calibrate_n_Filter(&MRC.Encoder);
-      // }
-      
+      if(MRC.coil_current_update_flag == 1) // 10kHZ coil current update
+      {
+        // if(MRC.Encoder.Encoder_Duty.CapFlag == 1)
+        // {
+          //   Encoder_Calibrate_n_Filter(&MRC.Encoder);
+          // }
+          
+      MRC_CoilCurrentControl_Update(&MRC);
       MRC_Com_Process(&MRC);
       Encoder_Calibrate_n_Filter(&MRC.Encoder);
-      MRC_collision_detect(&MRC);
+      //MRC_collision_detect(&MRC);
       MRC.filtered_coil_current = MRC_Update_Coil_Current(&MRC);
       MRC.coil_current_update_flag = 0;
     }
