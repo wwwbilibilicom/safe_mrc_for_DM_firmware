@@ -21,6 +21,7 @@ SafeMRC is an embedded control system for Magnetorheological Clutch (MRC) device
 
 - **Precise Torque/Current/Voltage Control**: Supports both voltage and current (feedforward+PI) control modes, with easy switching.
 - **Collision Detection**: Real-time collision detection and safety response.
+- **Dual Communication Backend**: Supports both RS-485 (USART2, 4 Mbps) and CAN (FDCAN1, 1 Mbps Classic CAN). Switched at compile-time via `mrc_com_backend.h`.
 - **DMA UART Communication**: High-efficiency UART communication using DMA and IDLE interrupt.
 - **Request-Response Protocol**: Master-slave communication pattern to avoid bus conflicts.
 - **Multi-sensor Support**: Encoder feedback, voltage monitoring, and temperature sensing.
@@ -119,7 +120,8 @@ safe-MRC/
 | `state_phase`          | `MRC_State`           | State machine phase                |
 | `collision_threshold`  | `float`               | Collision detection threshold      |
 | `COLLISION_REACT_FLAG` | `uint8_t`             | Collision reaction flag            |
-| `com`                  | `MRC_Com_t`           | Communication structure            |
+| `com`                  | `MRC_Com_t`           | RS-485 communication state         |
+| `can_com`              | `MRC_Can_Com_t`       | CAN communication state            |
 | `LED1`, `LED2`         | `device_led_t`        | LEDs for feedback                  |
 | `KEY1`, `KEY2`         | `device_key_t`        | Keys for user input                |
 | `Encoder`              | `Device_encoder_t`    | Encoder feedback                   |
@@ -134,7 +136,22 @@ safe-MRC/
 
 ## 6. Communication Protocol (Detailed)
 
-### Hardware Interface
+### Backend Selection
+
+The firmware supports two communication backends, selected at compile-time in `Devices/Inc/mrc_com_backend.h`:
+
+```c
+#define MRC_COM_RS485  0
+#define MRC_COM_CAN    1
+
+#define MRC_COM_BACKEND  MRC_COM_CAN   // ← change this line to switch
+```
+
+---
+
+### 6a. RS-485 Backend
+
+#### Hardware Interface
 
 - **Physical Layer**: RS-485 differential bus
 - **Baudrate**: 4 Mbps (4000000 bps)
@@ -143,7 +160,7 @@ safe-MRC/
 - **Termination**: 120Ω resistors recommended at both ends
 - **Cable**: Shielded twisted pair, length < 50m for 4Mbps
 
-### Protocol Overview
+#### Protocol Overview
 
 - **Pattern**: Request-Response (Master sends command, slave responds)
 - **Frame Format**: Binary, fixed length
@@ -193,15 +210,17 @@ uint16_t crc_ccitt(uint16_t crc, const uint8_t *data, size_t len);
 
 #### Mode Field Definition (MRC_Mode)
 
+| Value | Name       | Description                                        |
+|-------|------------|----------------------------------------------------|
+| 0     | FREE       | Free mode — coil de-energized                     |
+| 1     | FIX_LIMIT  | Fixed current mode — uses `des_coil_current`       |
+| 2     | ADAPTATION | Adaptive mode — collision detection active         |
+| 3     | DEBUG      | Debug mode — CAN/RS-485 commands ignored           |
+| 4     | MRC_RESET  | Collision recovery — clears collision flag         |
+| 5     | ZERO       | Zero encoder — sets current position as zero       |
+| 6     | REFRESH    | Reserved / refresh                                |
 
-| Value | Name       | Description           |
-| ------- | ------------ | ----------------------- |
-| 0     | FREE       | Free mode (no output) |
-| 1     | FIX_LIMIT  | Fixed limit mode      |
-| 2     | ADAPTATION | Adaptation mode       |
-| 3     | DEBUG      | Debug mode            |
-
-#### Example Communication Sequence
+#### Example Communication Sequence (RS-485)
 
 1. The host sends a 10-byte command frame to the RS-485 bus.
 2. The target device verifies the ID and CRC, then parses the command.
@@ -214,17 +233,61 @@ uint16_t crc_ccitt(uint16_t crc, const uint8_t *data, size_t len);
 - At 4 Mbps, cable length should be limited to several tens of meters, and shielded twisted pair is recommended.
 - In case of communication errors, the host should retransmit the command.
 
+---
+
+### 6b. CAN Backend (FDCAN1)
+
+#### Hardware Interface
+
+- **Physical Layer**: CAN 2.0B (Classic CAN)
+- **Baudrate**: 1 Mbps (default; configurable via `bsp_fdcan_set_baud()`)
+- **Topology**: Multi-drop CAN bus
+- **Termination**: 120Ω at both ends of the bus
+- **Peripheral**: STM32H723 FDCAN1, pins PB8 (RX) / PB9 (TX)
+
+#### CAN ID Scheme (11-bit Standard ID)
+
+```
+Command (Host → Device):  CAN_ID = 0x100 | device_id   (e.g., 0x101 for id=1)
+Feedback (Device → Host): CAN_ID = 0x200 | device_id   (e.g., 0x201 for id=1)
+```
+
+#### Command Frame (Host → Device, 8 bytes)
+
+| Byte | Field | Type | Description |
+|------|-------|------|-------------|
+| 0 | `mode` | uint8_t | MRC_Mode enum value |
+| 1 | reserved | uint8_t | Set to 0x00 |
+| 2–5 | `des_coil_current` | int32_t LE | Desired current in mA (×1000); e.g., 5A = 5000 |
+| 6–7 | reserved | uint8_t[2] | Set to 0x00 |
+
+#### Feedback Frame (Device → Host, 8 bytes)
+
+| Byte | Field | Type | Description |
+|------|-------|------|-------------|
+| 0 | `mode` | uint8_t | Current MRC_Mode |
+| 1 | `collision_flag` | uint8_t | 0x00 = safe, 0x01 = collision |
+| 2–5 | `encoder_value` | int32_t LE | Position in rad × 65535 |
+| 6–7 | `present_current` | int16_t LE | Coil current in mA (×1000) |
+
+> **Note**: The CAN feedback frame does **not** include encoder velocity (unlike RS-485). Compute velocity on the host side by differentiating consecutive position samples at the 1 kHz command rate.
+
+#### No Software CRC Needed
+
+CAN hardware provides CRC-15 and ACK automatically. No software checksum is required.
+
+#### Linux SocketCAN
+
+For Linux host development using SocketCAN, refer to [`docs/CAN_Protocol_Handoff.md`](docs/CAN_Protocol_Handoff.md) for a complete protocol reference, C code examples, and `can-utils` quick-test commands.
+
 ## 7. Timer Resource Allocation
 
-
-| Timer | Purpose/Function                       | Channel(s) | Notes/Details                                     |
-| ------- | ---------------------------------------- | ------------ | --------------------------------------------------- |
-| TIM1  | Encoder PWM capture (input capture)    | CH4        | Used for reading encoder PWM signal               |
-| TIM2  | PWM generation for VNH7040 driver      | CH1        | Main PWM output for motor driver                  |
-| TIM3  | (Available/Reserved for PWM)           | CH1, CH2   | Initialized for PWM, not actively used            |
-| TIM4  | (Available/Reserved for base timing)   | -          | Initialized, not actively used                    |
-| TIM6  | System periodic tasks (key scan, loop) | -          | Periodic interrupt for keyscan, control loop flag |
-| TIM7  | (Available/Reserved for base timing)   | -          | Initialized, not actively used                    |
+| Timer | Rate | Purpose | Notes |
+|-------|------|---------|-------|
+| TIM1 | — | Encoder PWM capture (input capture) | CH4, reads encoder PWM signal |
+| TIM2 | — | PWM generation for VNH7040 H-bridge | CH1, main coil drive output |
+| TIM4 | **10 kHz** | Coil current control loop | Sets `MRC.coil_current_update_flag`; triggers `MRC_CoilCurrentControl_Update()`, `MRC_Com_Process()` (CAN/RS485), encoder filter |
+| TIM6 | **1 kHz** | State machine & feedback TX | Sets `MRC.control_loop_flag`; triggers `MRC_StateMachine_Task1ms()` and CAN/RS485 feedback transmit |
 
 ## Example: Main Loop Usage
 

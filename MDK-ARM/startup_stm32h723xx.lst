@@ -1263,7 +1263,7 @@ ARM Macro Assembler    Page 20
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M7.fp.dp --apcs=
 interwork --depend=safemrc_for_dm_firmware\startup_stm32h723xx.d -osafemrc_for_
-dm_firmware\startup_stm32h723xx.o -II:\lab\project\MRF_Bearing_Lock\embeded_cod
+dm_firmware\startup_stm32h723xx.o -Ii:\lab\project\MRF_Bearing_Lock\embeded_cod
 e\safe_mrc_for_DM_firmware\MDK-ARM\RTE -I"D:\Program Files\Keil_v5\ARM\PACK\ARM
 \CMSIS\4.5.0\CMSIS\Include" -I"D:\Program Files\Keil_v5\ARM\PACK\Keil\STM32H7xx
 _DFP\3.1.1\Drivers\CMSIS\Device\ST\STM32H7xx\Include" --predefine="__MICROLIB S
