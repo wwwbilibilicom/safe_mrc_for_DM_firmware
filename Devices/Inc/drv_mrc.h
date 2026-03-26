@@ -27,6 +27,8 @@ extern "C"
 #include "filter.h"
 #include "mrc_statemachine.h"
 #include "crc_ccitt.h"
+#include "mrc_com_backend.h"
+#include "can_com.h"
 
 // MRC control mode enumeration
 typedef enum {
@@ -57,7 +59,8 @@ typedef enum {
         float collision_threshold; // collision_threshold of the MR device
         uint8_t COLLISION_REACT_FLAG;            // flag to execute collision reaction
         
-        MRC_Com_t com; // communication structure for the MRC device
+        MRC_Com_t com;         /* RS485 communication state */
+        MRC_Can_Com_t can_com; /* CAN communication state   */
 
         device_led_t LED1;
         device_led_t LED2;
@@ -190,6 +193,10 @@ typedef enum {
     int8_t MRC_SetMode(Device_MRC_t *mrc, MRC_Mode mode);
 
     void MRC_send_data(Device_MRC_t *MRC);
+
+    /* CAN backend equivalents */
+    void MRC_Can_Process(Device_MRC_t *MRC);
+    void MRC_Can_send_data(Device_MRC_t *MRC);
 
     void MRC_state_led_alert_on(Device_MRC_t *MRC);
 

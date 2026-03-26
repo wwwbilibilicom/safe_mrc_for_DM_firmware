@@ -16,6 +16,10 @@
 #define MRC_HEAD_HIGH    0xFE
 #define MRC_HEAD_LOW     0xEE
 
+/* DMA-accessible buffers in D2 SRAM (uncached, reachable by DMA1/DMA2) */
+static uint8_t rs485_rx_dma_buf[MRC_CMD_MSG_BUFFER_SIZE] __attribute__((section("RAM_D2")));
+static uint8_t rs485_tx_dma_buf[sizeof(MRC_Fbk_Protocol)]  __attribute__((section("RAM_D2")));
+
 /**
  * @brief Initialize MRC communication module
  * @param mrc_com: MRC communication structure pointer
@@ -31,6 +35,7 @@ int MRC_Com_Init(MRC_Com_t *mrc_com, UART_HandleTypeDef *huart, uint8_t id)
     
     // Initialize structure
     memset(mrc_com, 0, sizeof(MRC_Com_t));
+    mrc_com->cmd_msg_buffer = rs485_rx_dma_buf; // point to D2 SRAM DMA buffer
     mrc_com->id = id;
     mrc_com->mrc_huart = huart;
     mrc_com->RxFlag = 0;
@@ -144,9 +149,11 @@ int MRC_Com_SendFbk(MRC_Com_t *mrc_com)
         return -1;
     }
     
-    // Send feedback data using DMA
-    HAL_StatusTypeDef status = HAL_UART_Transmit_DMA(mrc_com->mrc_huart, 
-                                                    (uint8_t*)&mrc_com->fbk_msg, 
+    // Copy feedback frame to D2 SRAM staging buffer, then send via DMA.
+    // fbk_msg lives inside the MRC struct (may be in DTCM); DMA cannot access DTCM.
+    memcpy(rs485_tx_dma_buf, (uint8_t*)&mrc_com->fbk_msg, mrc_com->TxLen);
+    HAL_StatusTypeDef status = HAL_UART_Transmit_DMA(mrc_com->mrc_huart,
+                                                    rs485_tx_dma_buf,
                                                     mrc_com->TxLen);
     
     return (status == HAL_OK) ? 0 : -1;

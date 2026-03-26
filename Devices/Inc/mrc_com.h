@@ -27,7 +27,7 @@ extern "C"
         uint8_t id;
 
         MRC_Cmd_Protocol cmd_msg; // Command message structure
-        uint8_t cmd_msg_buffer[MRC_CMD_MSG_BUFFER_SIZE]; // DMA buffer for command message
+        uint8_t *cmd_msg_buffer; // DMA buffer for command message (points to RAM_D2 storage)
         uint16_t cmd_buffer_len; // Length of the command message
         MRC_Fbk_Protocol fbk_msg; // Feedback message structure
 

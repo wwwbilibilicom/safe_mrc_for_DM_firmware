@@ -13,6 +13,7 @@
 #include "string.h"
 #include "sys_clock.h"
 #include "flash.h"
+#include "fdcan.h"
 
 extern DMA_HandleTypeDef hdma_usart2_rx;
 
@@ -22,7 +23,7 @@ extern DMA_HandleTypeDef hdma_usart2_rx;
 #define PWM_TIM htim2 // PWM timer handle to generate the PWM for the VNH7040 device
 #define PWM_CH TIM_CHANNEL_1
 #define ADC_HANDLE &hadc1 // ADC handle for the VNH7040 device
-uint32_t ADC_BUFFER[1]; // Buffer for ADC test
+uint32_t ADC_BUFFER[1] __attribute__((section("RAM_D2"))); // ADC DMA buffer — must be in D2 SRAM
 #define ADC_OVER_SAMPLING_RATIO 16 // ADC oversampling ratio for coil current measurement
 #define ADC_SAMPLE_FREQUENCY 10000 // ADC sample frequency (Hz) for coil current measurement
 //#define DEFAULT_COIL_RESISTANCE 4.22f // Coil resistance for the MRC device
@@ -175,6 +176,15 @@ void MRC_Init(const uint8_t *dev_name, Device_MRC_t *MRC, uint8_t id)
         printf("MRC communication initialization failed!\n");
         return;
     }
+
+#if (MRC_COM_BACKEND == MRC_COM_CAN)
+    if (CAN_Com_Init(&MRC->can_com, &hfdcan1, id) != 0) {
+        printf("CAN communication initialization failed!\n");
+        return;
+    }
+    printf("CAN backend active: CMD_ID=0x%03X, FBK_ID=0x%03X\n",
+           CAN_CMD_ID(id), CAN_FBK_ID(id));
+#endif
 }
 
 void MRC_state_led_alert_on(Device_MRC_t *MRC) {
@@ -282,6 +292,73 @@ void MRC_send_data(Device_MRC_t *MRC)
         MRC->com.time_delay = (float)(MRC->com.tx_time - MRC->com.rx_time)/1000.0f;
     }
 		getFreq(&MRC->main_loop_freq_calculateor);
+}
+
+/**
+ * @brief  Pack and transmit a CAN feedback frame immediately after receiving a command.
+ *         Mirrors MRC_send_data() for the CAN backend.
+ * @param  MRC  Global MRC device instance pointer.
+ */
+void MRC_Can_send_data(Device_MRC_t *MRC)
+{
+    int32_t encoder_value   = (int32_t)(MRC->Encoder.CurrentEncoderValRad * 65535);
+    int32_t present_current = (int32_t)(MRC->filtered_coil_current * 1000);
+    uint8_t collision_flag  = MRC->COLLISION_REACT_FLAG;
+
+    if (CAN_Com_PackFbk(&MRC->can_com,
+                         MRC->statemachine.current_mode,
+                         encoder_value,
+                         present_current,
+                         collision_flag) == 0)
+    {
+        if (CAN_Com_SendFbk(&MRC->can_com) == 0)
+        {
+            MRC->can_com.tx_time   = getHighResTime_ns();
+            MRC->can_com.time_delay =
+                (float)(MRC->can_com.tx_time - MRC->can_com.rx_time) / 1000.0f;
+        }
+    }
+    getFreq(&MRC->main_loop_freq_calculateor);
+}
+
+/**
+ * @brief  Process a received CAN command at 10 kHz task rate.
+ *         Mirrors MRC_Com_Process() for the CAN backend.
+ *         RxFlag is set (in ISR) by fdcan1_rx_callback(); cleared here after processing.
+ * @param  MRC  Global MRC device instance pointer.
+ */
+void MRC_Can_Process(Device_MRC_t *MRC)
+{
+    if (MRC->can_com.RxFlag == 1)
+    {
+        if (MRC->can_com.cmd_correct == 1)
+        {
+            MRC_Mode received_mode = (MRC_Mode)MRC->can_com.cmd_msg.mode;
+
+            if (MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 0)
+            {
+                MRC_SetMode(MRC, received_mode);
+                if (received_mode == FIX_LIMIT || received_mode == ADAPTATION)
+                {
+                    getFreq(&MRC->com_loop_freq_calculateor);
+                    MRC->des_coil_current =
+                        (float)MRC->can_com.cmd_msg.des_coil_current / 1000.0f;
+                }
+                else if (received_mode == ZERO)
+                {
+                    Encoder_Reset_Zero(&MRC->Encoder);
+                }
+            }
+            if (MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 1)
+            {
+                if (received_mode == MRC_RESET)
+                {
+                    MRC_recover_from_collision(MRC);
+                }
+            }
+        }
+        MRC->can_com.RxFlag = 0;
+    }
 }
 
 int8_t MRC_SetMode(Device_MRC_t *mrc, MRC_Mode mode)

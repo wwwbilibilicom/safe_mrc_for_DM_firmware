@@ -15,7 +15,7 @@
 #include "mrc_statemachine.h"
 #include "flash.h"
 
-char usart1_rx_buffer[USART1_RX_BUFFER_SIZE];
+char usart1_rx_buffer[USART1_RX_BUFFER_SIZE] __attribute__((section("RAM_D2")));
 volatile uint16_t usart1_rx_index = 0;
 
 // 安全范围定义

@@ -20,6 +20,7 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
+#include "fdcan.h"
 #include "memorymap.h"
 #include "spi.h"
 #include "tim.h"
@@ -33,6 +34,9 @@
 #include "string.h"
 #include "flash.h"
 #include "mrc_debugcli.h"
+#include "bsp_fdcan.h"
+#include "mrc_com_backend.h"
+#include "can_com.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,14 +83,6 @@ int main(void)
 
   /* USER CODE END 1 */
 
-  /* Enable the CPU Cache */
-
-  /* Enable I-Cache---------------------------------------------------------*/
-  //SCB_EnableICache();
-
-  /* Enable D-Cache---------------------------------------------------------*/
-  //SCB_EnableDCache();
-
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -119,7 +115,10 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
+  MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
+  bsp_fdcan_set_baud(&hfdcan1, CAN_CLASS, CAN_BR_1M);
+  bsp_can_init();
   MRC_Init((uint8_t *)"safeMRC", &MRC, 1);
   // 初始化UART4调试指令集
   MRC_DebugCLI_Init(&huart1);
@@ -137,7 +136,7 @@ int main(void)
     {
       MRC.control_loop_flag = 0;
       MRC_StateMachine_Task1ms(&MRC.statemachine);
-      printf("a, ,b, c: %.3f, %.3f, %.3f\n", MRC.filtered_coil_current, MRC.des_coil_current, MRC.com.fbk_msg.present_current);
+      //printf("a, ,b, c: %.3f, %.3f, %.3f\n", MRC.filtered_coil_current, MRC.des_coil_current, MRC.com.fbk_msg.present_current);
       // printf("Actual coil current, filtered coil current: %.3f, %.3f\n", MRC.actual_coil_current, MRC.filtered_coil_current);
       //      MRC.print_count++;
       //      if(MRC.print_count == 1000)
@@ -155,7 +154,11 @@ int main(void)
           // }
           
       MRC_CoilCurrentControl_Update(&MRC);
+#if (MRC_COM_BACKEND == MRC_COM_RS485)
       MRC_Com_Process(&MRC);
+#elif (MRC_COM_BACKEND == MRC_COM_CAN)
+      MRC_Can_Process(&MRC);
+#endif
       Encoder_Calibrate_n_Filter(&MRC.Encoder);
       //MRC_collision_detect(&MRC);
       MRC.filtered_coil_current = MRC_Update_Coil_Current(&MRC);
@@ -342,6 +345,23 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
       __HAL_DMA_DISABLE_IT(MRC.com.mrc_huart->hdmarx, DMA_IT_HT);
     }
   }
+}
+
+void fdcan1_rx_callback(void)
+{
+    uint16_t rec_id;
+    uint8_t  rx_data[8] = {0};
+    /* Always dequeue the frame from FIFO0 regardless of backend */
+    fdcanx_receive(&hfdcan1, &rec_id, rx_data);
+
+#if (MRC_COM_BACKEND == MRC_COM_CAN)
+    if (CAN_Com_UnpackCmd(&MRC.can_com, rec_id, rx_data) == 0)
+    {
+        MRC.can_com.rx_time = getHighResTime_ns();
+        MRC.can_com.RxFlag  = 1;
+        MRC_Can_send_data(&MRC);  /* immediate response, mirrors RS485 pattern */
+    }
+#endif
 }
 
 int fputc(int ch, FILE *f)
