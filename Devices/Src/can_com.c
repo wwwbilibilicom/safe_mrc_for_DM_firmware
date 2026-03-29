@@ -91,9 +91,9 @@ int CAN_Com_PackFbk(MRC_Can_Com_t *can_com,
  * CAN_Com_SendFbk
  *
  * Builds the TX header directly with FDCAN_CLASSIC_CAN and FDCAN_BRS_OFF.
- * This is necessary because the existing fdcanx_send_data() in bsp_fdcan.c
- * hardcodes FDCAN_FD_CAN / FDCAN_BRS_ON which are invalid when the peripheral
- * is configured in Classic CAN mode (FDCAN_FRAME_CLASSIC).
+ * Note: fdcanx_send_data() in bsp_fdcan.c also handles Classic CAN correctly
+ * (it checks hfdcan->Init.FrameFormat), but we keep this dedicated function
+ * for clarity and to avoid coupling with the generic BSP send path.
  * --------------------------------------------------------------------------*/
 int CAN_Com_SendFbk(MRC_Can_Com_t *can_com)
 {

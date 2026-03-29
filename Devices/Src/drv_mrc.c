@@ -357,7 +357,8 @@ void MRC_Can_Process(Device_MRC_t *MRC)
                 }
             }
         }
-        MRC->can_com.RxFlag = 0;
+        MRC->can_com.RxFlag      = 0;
+        MRC->can_com.cmd_correct = 0;
     }
 }
 
