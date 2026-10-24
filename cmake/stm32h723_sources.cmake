@@ -1,0 +1,80 @@
+# Source manifest for the hand-maintained GCC build layer.
+set(FIRMWARE_CORE_SOURCES
+    Core/Src/adc.c
+    Core/Src/bdma.c
+    Core/Src/dma.c
+    Core/Src/fdcan.c
+    Core/Src/gpio.c
+    Core/Src/main.c
+    Core/Src/memorymap.c
+    Core/Src/spi.c
+    Core/Src/stm32h7xx_hal_msp.c
+    Core/Src/stm32h7xx_it.c
+    Core/Src/system_stm32h7xx.c
+    Core/Src/tim.c
+    Core/Src/usart.c
+)
+
+set(FIRMWARE_COMMON_SOURCES
+    Common/Src/flash.c
+    Common/Src/filter.c
+    Common/Src/pid_controller.c
+    Common/Src/sys_clock.c
+)
+
+set(FIRMWARE_DEVICE_SOURCES
+    Devices/Src/bsp_fdcan.c
+    Devices/Src/can_com.c
+    Devices/Src/crc_ccitt.c
+    Devices/Src/drv_encoder.c
+    Devices/Src/drv_key.c
+    Devices/Src/drv_led.c
+    Devices/Src/drv_mrc.c
+    Devices/Src/drv_vnh7040.c
+    Devices/Src/kth78xx.c
+    Devices/Src/mrc_com.c
+    Devices/Src/mrc_debugcli.c
+    Devices/Src/mrc_statemachine.c
+    Devices/Src/rs485.c
+    Devices/Src/rs485_error_handler.c
+)
+
+set(FIRMWARE_HAL_SOURCES
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c
+    Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
+)
+
+set(FIRMWARE_STARTUP_SOURCES
+    startup/startup_stm32h723xx_gcc.s
+)
+
+set(FIRMWARE_SOURCES
+    ${FIRMWARE_CORE_SOURCES}
+    ${FIRMWARE_COMMON_SOURCES}
+    ${FIRMWARE_DEVICE_SOURCES}
+    ${FIRMWARE_HAL_SOURCES}
+    ${FIRMWARE_STARTUP_SOURCES}
+)

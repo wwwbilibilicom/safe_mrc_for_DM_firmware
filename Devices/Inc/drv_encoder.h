@@ -15,7 +15,7 @@ extern "C"
 #endif
 
 #include "filter.h"
-#include "stdint.h"
+#include <stdint.h>
 #ifdef FREERTOS
 #include "cmsis_os.h"
 #endif

@@ -16,7 +16,7 @@ extern "C"
 
 #define FILTER_NUM 8 // //滑动平均滤波数值个�??
 
-#include "stdint.h"
+#include <stdint.h>
 
 #pragma pack(1)
     typedef struct 

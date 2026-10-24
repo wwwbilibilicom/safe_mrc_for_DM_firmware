@@ -10,7 +10,7 @@
 #include "usart.h"
 #include "drv_encoder.h"
 #include "tim.h"
-#include "stdint.h"
+#include <stdint.h>
 
 
 

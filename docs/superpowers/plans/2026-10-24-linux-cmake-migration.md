@@ -88,15 +88,15 @@ git commit -m "build: switch CubeMX generation target to CMake"
 - Create: `cmake/stm32h723_sources.cmake`
 - Modify: `Devices/Inc/mrc_com_backend.h`
 
-- [ ] **Step 1: Define the cross-compilation toolchain.**
+- [x] **Step 1: Define the cross-compilation toolchain.**
 
 Configure `arm-none-eabi-gcc`, `arm-none-eabi-g++`, `arm-none-eabi-objcopy`, `arm-none-eabi-size`, `CMAKE_SYSTEM_NAME=Generic`, Cortex-M7 CPU flags, hard-float FPU flags, and compiler dependency scanning. Fail configuration with a clear message if the compiler is unavailable.
 
-- [ ] **Step 2: Enumerate the exact project sources.**
+- [x] **Step 2: Enumerate the exact project sources.**
 
 List the CubeMX-generated `Core/Src/*.c`, CMSIS system source, required HAL source files, every `Common/Src/*.c`, every `Devices/Src/*.c`, and the GCC startup assembly. Exclude unrelated HAL drivers only after link verification proves they are unused.
 
-- [ ] **Step 3: Add include paths and definitions.**
+- [x] **Step 3: Add include paths and definitions.**
 
 Use the same include directories and definitions as Keil:
 
@@ -115,11 +115,11 @@ STM32H723xx
 
 Expose `MRC_COM_BACKEND` as a CMake cache option and translate `RS485` and `CAN` to the existing preprocessor values. Change the header's unconditional `#define MRC_COM_BACKEND MRC_COM_CAN` to an `#ifndef MRC_COM_BACKEND` default so a CMake definition can select either backend.
 
-- [ ] **Step 4: Add firmware output conversions.**
+- [x] **Step 4: Add firmware output conversions.**
 
 Generate `safeMRC_for_DM_firmware.elf`, `.hex`, `.bin`, and `.map` in the selected build directory. Add a `size` target that runs `arm-none-eabi-size` and prints the map path.
 
-- [ ] **Step 5: Configure and inspect the first source-only build.**
+- [x] **Step 5: Configure and inspect the first source-only build.**
 
 Run:
 
@@ -142,11 +142,11 @@ Expected at this stage: configuration succeeds; compilation may stop on the know
 - Reference: `MDK-ARM/startup_stm32h723xx.s`
 - Reference: `MDK-ARM/safeMRC_for_DM_firmware.sct`
 
-- [ ] **Step 1: Add the GCC vector table and reset handler.**
+- [x] **Step 1: Add the GCC vector table and reset handler.**
 
 Port the STM32H723 vector table and handler symbol names from the existing startup file to GNU assembler syntax. Define the initial stack symbol, `Reset_Handler`, weak default handlers, data copy from flash to RAM, BSS zeroing, `SystemInit`, and `__libc_init_array` before `main`.
 
-- [ ] **Step 2: Define the linker memory regions.**
+- [x] **Step 2: Define the linker memory regions.**
 
 Verify the addresses against `Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h723xx.h` and `MDK-ARM/safeMRC_for_DM_firmware.sct`, then declare the corresponding regions in `cmake/STM32H723VGHx.ld`:
 
@@ -159,7 +159,7 @@ RAM_D2      0x30000000 32K
 
 Place `.isr_vector` first in `FLASH`, normal `.text`/`.rodata` in `FLASH`, ordinary RW/ZI in the available CPU SRAM, the initial stack at the top of DTCM, and `*(RAM_D2)` in a `NOLOAD` `RAM_D2` section. Define symbols required by startup and C library code.
 
-- [ ] **Step 3: Link and inspect memory placement.**
+- [x] **Step 3: Link and inspect memory placement.**
 
 Run:
 
@@ -190,7 +190,7 @@ git commit -m "build: add GCC startup and STM32H723 linker layout"
 - Modify: any source found by `rg '"stdint.h"'`
 - Test: GCC compilation of all firmware sources
 
-- [ ] **Step 1: Rename the ARMCC-only compatibility header.**
+- [x] **Step 1: Rename the ARMCC-only compatibility header.**
 
 Run:
 
@@ -200,7 +200,7 @@ git mv Devices/Inc/stdint.h Devices/Inc/armcc_compat_stdint.h
 
 This removes the name that shadows GCC's standard header while retaining the old implementation for the Keil fallback/reference path.
 
-- [ ] **Step 2: Find and replace active legacy-header includes.**
+- [x] **Step 2: Find and replace active legacy-header includes.**
 
 Run:
 
@@ -210,11 +210,11 @@ rg -n '"stdint\\.h"|<stdint\\.h>' Core Common Devices Drivers
 
 Change the two project includes currently found in `Devices/Src/drv_encoder.c` and `Devices/Inc/drv_encoder.h` from `"stdint.h"` to `<stdint.h>`. Leave CMSIS and HAL includes unchanged; they already request the standard header.
 
-- [ ] **Step 3: Keep the Keil fallback isolated.**
+- [x] **Step 3: Keep the Keil fallback isolated.**
 
 Do not add a new `stdint.h` under `Devices/Inc`, and confirm the Keil project still resolves its compiler-provided standard header after the rename. The renamed `armcc_compat_stdint.h` is retained but is not included by any GCC source.
 
-- [ ] **Step 4: Rebuild both communication backends.**
+- [x] **Step 4: Rebuild both communication backends.**
 
 Run:
 
@@ -230,6 +230,10 @@ ninja -C build/can-debug
 Expected: both configurations compile and link, producing ELF/HEX/BIN/MAP artifacts.
 
 - [ ] **Step 5: Commit the compiler portability fix.**
+
+### Execution status
+
+The GCC build layer now produces Debug ELF/HEX/BIN/MAP artifacts for both RS485 and CAN. The CubeMX target switch remains pending because this environment has no X11 display; do it in the CubeMX UI after opening the project on a graphical Linux or Windows host. Do not hand-edit `ProjectManager.TargetToolchain`.
 
 Run:
 

@@ -22,7 +22,9 @@
 #define MRC_COM_RS485  0
 #define MRC_COM_CAN    1
 
-/* >>>>>> EDIT THIS LINE to switch backend <<<<<< */
+/* Keil keeps the CAN default; GCC/CMake may override this macro at compile time. */
+#ifndef MRC_COM_BACKEND
 #define MRC_COM_BACKEND  MRC_COM_CAN
+#endif
 
 #endif /* __MRC_COM_BACKEND_H__ */
