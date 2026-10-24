@@ -94,6 +94,19 @@ user to the distribution's `plugdev` group or installing an ST-Link udev rule.
 If the installed `st-flash` does not support `reset`, reset the board with the
 probe or power cycle after the write.
 
+### GitHub Actions CI/CD
+
+Pull requests and branch pushes run the hosted workflow in
+`.github/workflows/firmware-ci.yml`. It builds all four combinations of RS485
+and CAN with Debug and Release configurations, checks the ELF/HEX/BIN/MAP
+outputs, and uploads them as short-lived workflow artifacts. Pushing a tag such
+as `v1.0.0` also creates a GitHub Release containing the RS485 and CAN Release
+artifacts with generated release notes.
+
+The hosted workflow does not flash a physical board because GitHub-hosted
+runners do not have the project's ST-Link or OpenOCD target connected. Use the
+local `flash` or `flash-stlink` targets after downloading a verified artifact.
+
 For a GDB session, start the OpenOCD server in one terminal:
 
 ```bash

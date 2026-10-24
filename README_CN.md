@@ -90,6 +90,18 @@ OpenOCD 默认只擦除和写入 ELF 镜像覆盖的扇区，并在写入后校�
 组，或安装 ST-Link 的 udev 规则。如果当前版本的 `st-flash` 不支持 `reset`，
 写入完成后请使用探针复位或重新给目标板上电。
 
+### GitHub Actions CI/CD
+
+Pull Request 和分支 Push 会自动执行
+`.github/workflows/firmware-ci.yml`，构建 RS485、CAN 两种后端的 Debug 和
+Release 配置，共四种组合；同时检查 ELF、HEX、BIN、MAP 文件并上传为临时
+构建产物。推送类似 `v1.0.0` 的版本标签后，Action 会自动创建 GitHub Release，
+并附带 RS485 和 CAN 的 Release 固件及自动生成的变更说明。
+
+GitHub 托管 runner 没有连接项目的 ST-Link 和开发板，因此 CI/CD 不会执行
+实体硬件烧录。下载并确认产物后，仍需在本地使用 `flash` 或 `flash-stlink`
+目标完成烧录。
+
 GDB 调试可以在一个终端启动 OpenOCD：
 
 ```bash

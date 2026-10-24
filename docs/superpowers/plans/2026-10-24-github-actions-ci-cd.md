@@ -15,19 +15,19 @@
 **Files:**
 - Create: `.github/workflows/firmware-ci.yml`
 
-- [ ] **Step 1: Define triggers and least-privilege default permissions**
+- [x] **Step 1: Define triggers and least-privilege default permissions**
 
 Configure `pull_request`, branch `push`, and `v*` tag `push` triggers. Set the
 workflow default to `contents: read`; do not grant write permissions to build
 matrix jobs.
 
-- [ ] **Step 2: Define the four backend/configuration combinations**
+- [x] **Step 2: Define the four backend/configuration combinations**
 
 Use a matrix with `RS485` and `CAN` crossed with `Debug` and `Release`. Use
 `ubuntu-latest`, disable fail-fast so all combinations report status, and set
 the job timeout to 20 minutes.
 
-- [ ] **Step 3: Install and validate the native build tools**
+- [x] **Step 3: Install and validate the native build tools**
 
 Check out the source, install `cmake`, `ninja-build`, `gcc-arm-none-eabi`, and
 `binutils-arm-none-eabi` through apt, then run:
@@ -36,7 +36,7 @@ Check out the source, install `cmake`, `ninja-build`, `gcc-arm-none-eabi`, and
 bash -n scripts/build.sh scripts/flash_openocd.sh scripts/flash_stlink.sh
 ```
 
-- [ ] **Step 4: Build and verify each matrix result**
+- [x] **Step 4: Build and verify each matrix result**
 
 Invoke:
 
@@ -56,7 +56,7 @@ safeMRC_for_DM_firmware.bin
 safeMRC_for_DM_firmware.map
 ```
 
-- [ ] **Step 5: Upload each job's artifacts**
+- [x] **Step 5: Upload each job's artifacts**
 
 Use `actions/upload-artifact@v4` with the artifact name
 `firmware-${{ matrix.backend }}-${{ matrix.config }}`, upload the four verified
@@ -67,19 +67,19 @@ files, and set retention to 14 days.
 **Files:**
 - Modify: `.github/workflows/firmware-ci.yml`
 
-- [ ] **Step 1: Gate the Release job on successful matrix builds and version tags**
+- [x] **Step 1: Gate the Release job on successful matrix builds and version tags**
 
 Make the job depend on the complete matrix job and require both
 `github.event_name == 'push'` and a `refs/tags/v*` ref. Grant this job only
 `contents: write`; keep the workflow default read-only.
 
-- [ ] **Step 2: Download only the Release matrix artifacts**
+- [x] **Step 2: Download only the Release matrix artifacts**
 
 Use `actions/download-artifact@v4` with the exact names
 `firmware-RS485-Release` and `firmware-CAN-Release`, placing each artifact in a
 separate directory below `release-assets/`.
 
-- [ ] **Step 3: Name and publish release files**
+- [x] **Step 3: Name and publish release files**
 
 Rename each downloaded file to include backend and configuration, for example
 `safeMRC-CAN-Release.hex`. Use the preinstalled `gh` command to run
@@ -93,21 +93,21 @@ with `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`. Do not invoke either flash target.
 - Modify: `README_CN.md`
 - Verify: `.github/workflows/firmware-ci.yml`
 
-- [ ] **Step 1: Document CI triggers, matrix builds, downloads, and tag release**
+- [x] **Step 1: Document CI triggers, matrix builds, downloads, and tag release**
 
 Add a short section to both READMEs explaining that PRs and branch pushes build
 both backends in Debug/Release, that each run uploads temporary artifacts, and
 that pushing a `v*` tag creates a Release with Release configuration outputs.
 State that hosted CI does not flash physical hardware.
 
-- [ ] **Step 2: Validate workflow syntax and local consistency**
+- [x] **Step 2: Validate workflow syntax and local consistency**
 
 Run `actionlint .github/workflows/firmware-ci.yml` when `actionlint` is
 installed. Also parse the YAML with an available YAML parser, check the shell
 commands with `bash -n`, verify all artifact paths match `scripts/build.sh`,
 and run `git diff --check` on changed files.
 
-- [ ] **Step 3: Verify the local build wrapper still succeeds**
+- [x] **Step 3: Verify the local build wrapper still succeeds**
 
 Run:
 
@@ -119,3 +119,12 @@ scripts/build.sh --backend CAN --config Release --jobs 2
 Both commands must exit successfully and leave ELF, HEX, BIN, and MAP outputs in
 their respective build directories. Document that the GitHub-hosted workflow
 itself can only be fully confirmed after pushing the branch to GitHub.
+
+### Execution status
+
+The workflow and README documentation are implemented. Local validation passed
+for Bash syntax, YAML parsing with PyYAML, matrix/release artifact references,
+README workflow references, and `git diff --check`. `actionlint` was not
+installed in this environment. The local RS485 Debug and CAN Release builds
+completed successfully. GitHub-hosted execution and tag release publishing
+still require pushing this branch to the repository.
