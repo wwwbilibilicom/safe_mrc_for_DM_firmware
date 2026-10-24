@@ -235,6 +235,21 @@ Expected: both configurations compile and link, producing ELF/HEX/BIN/MAP artifa
 
 CubeMX has now generated the CMake input in this project: `CMakePresets.json`, `cmake/gcc-arm-none-eabi.cmake`, `cmake/stm32cubemx/CMakeLists.txt`, `STM32H723XG_FLASH.ld`, and `startup_stm32h723xx.s`. The top-level CMake consumes the generated Core/HAL source target and adds the hand-maintained Common/Devices application layer. The maintained linker and startup remain selected because the generated defaults do not preserve the firmware's RAM_D2 DMA placement and generated startup calls the unavailable `ExitRun0Mode` symbol.
 
+The current migration status and validation record are maintained in this plan. The
+`dev_docs/` directory is reserved for collaboration standards and does not duplicate
+the technical migration documentation.
+
+Validated on Linux:
+
+- `scripts/build.sh --backend RS485 --full --jobs 2`
+- `scripts/build.sh --backend CAN --full --jobs 2`
+- `scripts/build.sh --backend RS485 --config Release --jobs 2`
+- `bash -n scripts/build.sh scripts/flash_openocd.sh scripts/flash_stlink.sh`
+
+The RS485 and CAN Debug builds and the RS485 Release build produced ELF, HEX, BIN,
+and MAP artifacts. Hardware flashing, reset/startup, UART CLI, RS485/CAN behavior,
+DMA, ADC, encoder, PWM, and collision-response checks remain pending.
+
 Run:
 
 ```bash
