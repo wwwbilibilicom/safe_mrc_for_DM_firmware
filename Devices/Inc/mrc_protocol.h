@@ -21,7 +21,7 @@ typedef enum MRC_Mode
     FREE,
     FIX_LIMIT,
     ADAPTATION,
-    DEBUG,
+    MRC_MODE_DEBUG,
     MRC_RESET,
     ZERO,
     REFRESH

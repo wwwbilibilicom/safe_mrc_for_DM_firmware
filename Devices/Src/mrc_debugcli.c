@@ -52,8 +52,8 @@ void MRC_DebugCLI_Parse(const char *cmd_str, Device_MRC_t *mrc) {
     // DEBUG ON/OFF commands
     if (strcmp(cmd, "DEBUG") == 0) {
         if (strcmp(arg1, "ON") == 0) {
-            // MRC_StateMachine_SetMode(&mrc->statemachine, DEBUG, mrc->filtered_coil_current);
-            MRC_SetMode(mrc, DEBUG);
+            // MRC_StateMachine_SetMode(&mrc->statemachine, MRC_MODE_DEBUG, mrc->filtered_coil_current);
+            MRC_SetMode(mrc, MRC_MODE_DEBUG);
             printf("[USART1] DEBUG mode enabled.\n");
         } else if (strcmp(arg1, "OFF") == 0) {
             // MRC_StateMachine_SetMode(&mrc->statemachine, FIX_LIMIT, mrc->filtered_coil_current);
@@ -67,13 +67,13 @@ void MRC_DebugCLI_Parse(const char *cmd_str, Device_MRC_t *mrc) {
     }
 
     // Only allow other commands in DEBUG mode
-    if (mrc->statemachine.current_mode != DEBUG) {
+    if (mrc->statemachine.current_mode != MRC_MODE_DEBUG) {
         const char *mode_str = "UNKNOWN";
         switch (mrc->statemachine.current_mode) {
             case FREE: mode_str = "FREE"; break;
             case FIX_LIMIT: mode_str = "FIX_LIMIT"; break;
             case ADAPTATION: mode_str = "ADAPTATION"; break;
-            case DEBUG: mode_str = "DEBUG"; break;
+            case MRC_MODE_DEBUG: mode_str = "DEBUG"; break;
             default: break;
         }
         printf("[USART1] DEBUG mode is not enabled! Current mode: %s\n", mode_str);

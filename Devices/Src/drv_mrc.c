@@ -335,7 +335,7 @@ void MRC_Can_Process(Device_MRC_t *MRC)
         {
             MRC_Mode received_mode = (MRC_Mode)MRC->can_com.cmd_msg.mode;
 
-            if (MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 0)
+            if (MRC->statemachine.current_mode != MRC_MODE_DEBUG && MRC->COLLISION_REACT_FLAG == 0)
             {
                 MRC_SetMode(MRC, received_mode);
                 if (received_mode == FIX_LIMIT || received_mode == ADAPTATION)
@@ -349,7 +349,7 @@ void MRC_Can_Process(Device_MRC_t *MRC)
                     Encoder_Reset_Zero(&MRC->Encoder);
                 }
             }
-            if (MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 1)
+            if (MRC->statemachine.current_mode != MRC_MODE_DEBUG && MRC->COLLISION_REACT_FLAG == 1)
             {
                 if (received_mode == MRC_RESET)
                 {
@@ -392,7 +392,7 @@ void MRC_Com_Process(Device_MRC_t *MRC)
             if (MRC_Com_UnpackCmd(&MRC->com) == 0) {
                 
                 // Update device parameters from received command
-                if(MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 0)
+                if(MRC->statemachine.current_mode != MRC_MODE_DEBUG && MRC->COLLISION_REACT_FLAG == 0)
                 {
                     // MRC_StateMachine_SetMode(&MRC->statemachine, MRC->com.cmd_msg.mode, MRC->filtered_coil_current);
                     MRC_SetMode(MRC, MRC->com.cmd_msg.mode);
@@ -407,7 +407,7 @@ void MRC_Com_Process(Device_MRC_t *MRC)
                         Encoder_Reset_Zero(&MRC->Encoder);
                     }
                 }
-                if(MRC->statemachine.current_mode != DEBUG && MRC->COLLISION_REACT_FLAG == 1)
+                if(MRC->statemachine.current_mode != MRC_MODE_DEBUG && MRC->COLLISION_REACT_FLAG == 1)
                 {
                     if (MRC->com.cmd_msg.mode == MRC_RESET)
                     {

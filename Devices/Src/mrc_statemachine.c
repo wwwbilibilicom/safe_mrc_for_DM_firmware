@@ -83,10 +83,10 @@ void MRC_StateMachine_Task1ms(MRC_StateMachine_t *sm) {
 
 // Only allow current set in FIX_LIMIT, ADAPTATION, DEBUG
 bool MRC_StateMachine_CanSetCurrent(MRC_StateMachine_t *sm) {
-    return (sm->current_mode == FIX_LIMIT || sm->current_mode == ADAPTATION || sm->current_mode == DEBUG);
+    return (sm->current_mode == FIX_LIMIT || sm->current_mode == ADAPTATION || sm->current_mode == MRC_MODE_DEBUG);
 }
 
 // Only allow voltage set in DEBUG (or add other logic as needed)
 bool MRC_StateMachine_CanSetVoltage(MRC_StateMachine_t *sm) {
-    return (sm->current_mode == DEBUG);
+    return (sm->current_mode == MRC_MODE_DEBUG);
 }
