@@ -9,3 +9,13 @@
 - `notes/`：临时技术调查、实验记录和待办事项。
 
 文档尽量记录背景、决策、验证命令和未完成的风险，避免只记录最终结论。
+
+## 文档入口
+
+- [提交信息规范](standards/commit-message.md)
+- [提交消息模板](standards/commit-template.txt)
+- [Linux/CMake 迁移状态](migration/linux-cmake.md)
+- [原迁移设计](../docs/superpowers/specs/2026-10-24-linux-cmake-migration-design.md)
+- [原迁移计划](../docs/superpowers/plans/2026-10-24-linux-cmake-migration.md)
+
+原迁移设计与计划保留在现有路径；后续工作记录放入本目录对应分类。

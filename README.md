@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![MCU: STM32H723](https://img.shields.io/badge/MCU-STM32H723-03234B?logo=stmicroelectronics)
-![IDE: Keil MDK](https://img.shields.io/badge/IDE-Keil_MDK--ARM-red)
+![Build: CMake/Ninja](https://img.shields.io/badge/Build-CMake%2FNinja-064F8C)
 ![CubeMX](https://img.shields.io/badge/Config-STM32CubeMX-blue)
 
 <p align="center">
@@ -29,18 +29,132 @@
 
 ### Prerequisites
 
-- [Keil MDK-ARM](https://www.keil.com/) v5.37+
+- CMake 3.22 or newer and [Ninja](https://ninja-build.org/)
+- GNU Arm Embedded toolchain (`arm-none-eabi-gcc`, `objcopy`, `size`)
 - [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html) (for peripheral config)
-- ST-Link programmer
+- ST-Link programmer; [OpenOCD](https://openocd.org/) or `st-flash` for command-line flashing
+
+The original Keil MDK project under `MDK-ARM/` remains available as a fallback. It is not required for the Linux build.
 
 ### Build & Flash
 
 ```bash
-# 1. Open project in Keil
+# Configure the CubeMX-generated RS-485 Debug preset
+cmake --preset Debug
+
+# Build ELF, HEX, BIN, and MAP files
+cmake --build --preset Debug
+cmake --build --preset Debug --target size
+
+# For CAN, configure a separate build directory with the same CubeMX toolchain
+cmake -S . -B build/CAN -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DMRC_COM_BACKEND=CAN
+cmake --build build/CAN
+
+# Flash with OpenOCD (verifies and resets the target)
+cmake --build --preset Debug --target flash
+
+# Or use the st-flash fallback
+cmake --build --preset Debug --target flash-stlink
+```
+
+For normal development, use the build wrapper instead of typing the CMake
+commands manually. It performs an incremental build by default; pass
+`--full` when every object should be rebuilt:
+
+```bash
+scripts/build.sh
+scripts/build.sh --full
+scripts/build.sh --backend CAN --full
+scripts/build.sh --backend RS485 --config Release --jobs 8
+```
+
+The wrapper configures CMake when a build directory is new (or when `--full` is
+selected), then builds and prints the firmware size. Existing incremental
+builds let Ninja decide whether CMake regeneration is needed. It uses separate
+directories such as `build/RS485-Debug/` and `build/CAN-Debug/` so switching
+backends does not reuse incompatible objects.
+
+The direct `cmake --preset Debug` commands place generated files in
+`build/Debug/`; the wrapper uses its selected directory such as
+`build/RS485-Debug/`. The `flash` target uses
+`interface/stlink.cfg` and `target/stm32h7x.cfg` by default. To use different
+OpenOCD configuration files, invoke the script directly:
+
+```bash
+scripts/flash_openocd.sh build/Debug/safeMRC_for_DM_firmware.elf \
+  interface/my_probe.cfg target/stm32h7x.cfg
+```
+
+`openocd` programs and verifies only the sectors covered by the ELF image; it
+does not perform a chip erase by default. ST-Link tools may require adding the
+user to the distribution's `plugdev` group or installing an ST-Link udev rule.
+If the installed `st-flash` does not support `reset`, reset the board with the
+probe or power cycle after the write.
+
+For a GDB session, start the OpenOCD server in one terminal:
+
+```bash
+openocd -f interface/stlink.cfg -f target/stm32h7x.cfg
+```
+
+Then connect from another terminal:
+
+```text
+arm-none-eabi-gdb build/Debug/safeMRC_for_DM_firmware.elf
+(gdb) target extended-remote :3333
+(gdb) monitor reset halt
+(gdb) load
+(gdb) monitor reset
+(gdb) continue
+```
+
+VS Code users can install Cortex-Debug and use this optional launch
+configuration without making VS Code part of the build:
+
+```json
+{
+  "name": "SafeMRC (OpenOCD)",
+  "type": "cortex-debug",
+  "request": "launch",
+  "cwd": "${workspaceFolder}",
+  "executable": "${workspaceFolder}/build/Debug/safeMRC_for_DM_firmware.elf",
+  "servertype": "openocd",
+  "configFiles": ["interface/stlink.cfg", "target/stm32h7x.cfg"],
+  "runToEntryPoint": "main"
+}
+```
+
+### CubeMX regeneration
+
+`safeMRC_for_DM_firmware.ioc` remains the source of truth for the MCU, clock
+tree, GPIO, DMA, and peripheral configuration. CubeMX now generates
+`CMakePresets.json`, `cmake/gcc-arm-none-eabi.cmake`, and
+`cmake/stm32cubemx/CMakeLists.txt` in this project. The top-level
+`CMakeLists.txt` consumes that generated source list and adds the application
+layer under `Common/` and `Devices/`.
+
+The generated CubeMX linker script and startup file are kept for reference, but
+the top-level build selects the maintained GCC startup and linker script because
+the firmware uses a dedicated `RAM_D2` section for DMA buffers. CubeMX may
+regenerate its files; do not remove the hand-maintained `cmake/STM32H723VGHx.ld`
+or `startup/startup_stm32h723xx_gcc.s` files.
+
+After every CubeMX generation:
+
+1. Enable backup and keep-user-code options before generating.
+2. Review `git diff` and keep generated changes limited to CubeMX-owned files (`Core/`, `Drivers/`, `cmake/stm32cubemx/`, presets, and generated toolchain files).
+3. Reconfigure with `cmake --preset Debug` and build both `RS485` and `CAN` backends.
+4. Inspect the map file, then flash and run the hardware smoke tests before committing.
+
+The Keil fallback remains available:
+
+```text
 MDK-ARM/safeMRC_for_DM_firmware.uvprojx
 
-# 2. Build (F7 in Keil)
-# 3. Flash via ST-Link (Download button or STM32CubeProgrammer)
+# Build with F7 and flash through the Keil debugger or STM32CubeProgrammer.
 ```
 
 ### Host Python Tool
@@ -106,9 +220,12 @@ Both use a request-response pattern: host sends a command, device replies with f
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Commit your changes (`git commit -am 'Add my feature'`)
+3. Commit your changes using the [commit message standard](dev_docs/standards/commit-message.md) (`TYPE:`, `WHY:`, `WHAT:`, `TEST:`)
 4. Push to the branch (`git push origin feature/my-feature`)
 5. Open a Pull Request
+
+Working notes, migration records, and collaboration standards are indexed in
+[dev_docs](dev_docs/README.md).
 
 ## License
 

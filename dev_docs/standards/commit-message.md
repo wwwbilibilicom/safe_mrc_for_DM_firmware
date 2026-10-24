@@ -39,6 +39,15 @@ TEST:
 4. `TEST` 写出实际执行的命令和结果；硬件尚未验证时明确写出。
 5. 一个提交尽量只包含一个可独立回滚的逻辑变化。
 
+可以使用同目录下的 `commit-template.txt` 启动提交编辑器：
+
+```bash
+git commit --template=dev_docs/standards/commit-template.txt
+```
+
+将模板中的类型和占位文字替换为本次实际内容后再提交。标题中的 `<TYPE>`
+只填写一个类型，例如 `FIX` 或 `BUILD`，不要原样填写 `FIX/NEW/ADD`。
+
 ## 示例
 
 ```text

@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![MCU: STM32H723](https://img.shields.io/badge/MCU-STM32H723-03234B?logo=stmicroelectronics)
-![IDE: Keil MDK](https://img.shields.io/badge/IDE-Keil_MDK--ARM-red)
+![构建: CMake/Ninja](https://img.shields.io/badge/Build-CMake%2FNinja-064F8C)
 ![CubeMX](https://img.shields.io/badge/Config-STM32CubeMX-blue)
 
 <p align="center">
@@ -29,18 +29,127 @@
 
 ### 环境要求
 
-- [Keil MDK-ARM](https://www.keil.com/) v5.37+
+- CMake 3.22 或更高版本，以及 [Ninja](https://ninja-build.org/)
+- GNU Arm Embedded 工具链（`arm-none-eabi-gcc`、`objcopy`、`size`）
 - [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)（外设配置）
-- ST-Link 编程器
+- ST-Link 编程器；命令行烧录需要 [OpenOCD](https://openocd.org/) 或 `st-flash`
+
+`MDK-ARM/` 下的 Keil 工程仍保留作为备用，Linux 构建不再依赖 Keil。
 
 ### 编译与烧录
 
 ```bash
-# 1. 在 Keil 中打开工程
+# 配置 CubeMX 生成的 RS-485 Debug preset
+cmake --preset Debug
+
+# 生成 ELF、HEX、BIN 和 MAP
+cmake --build --preset Debug
+cmake --build --preset Debug --target size
+
+# CAN 使用相同的 CubeMX 工具链配置独立构建目录
+cmake -S . -B build/CAN -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DMRC_COM_BACKEND=CAN
+cmake --build build/CAN
+
+# 使用 OpenOCD 烧录（校验后复位）
+cmake --build --preset Debug --target flash
+
+# 或使用 st-flash 备用命令
+cmake --build --preset Debug --target flash-stlink
+```
+
+日常开发可以直接运行构建脚本，不需要重复输入 CMake 和 Ninja 命令。默认是
+增量编译；需要重新编译全部源文件时加上 `--full`：
+
+```bash
+scripts/build.sh
+scripts/build.sh --full
+scripts/build.sh --backend CAN --full
+scripts/build.sh --backend RS485 --config Release --jobs 8
+```
+
+首次使用某个构建目录时，脚本会配置 CMake；增量编译时由 Ninja 自动检查是否
+需要重新生成，`--full` 会显式重新配置并清理后再编译。脚本最后会打印固件大小。
+RS485 和 CAN 使用独立目录，例如 `build/RS485-Debug/`、`build/CAN-Debug/`，
+不会混用不同通信后端的目标文件。
+
+直接使用 `cmake --preset Debug` 时，生成文件位于 `build/Debug/`；使用构建脚本
+时位于脚本选择的目录，例如 `build/RS485-Debug/`。`flash` 目标默认使用
+`interface/stlink.cfg` 和 `target/stm32h7x.cfg`。如果探针或目标配置不同，
+可以直接调用脚本：
+
+```bash
+scripts/flash_openocd.sh build/Debug/safeMRC_for_DM_firmware.elf \
+  interface/my_probe.cfg target/stm32h7x.cfg
+```
+
+OpenOCD 默认只擦除和写入 ELF 镜像覆盖的扇区，并在写入后校验，不会执行整片
+擦除。Linux 下使用 ST-Link 工具可能需要将当前用户加入发行版的 `plugdev`
+组，或安装 ST-Link 的 udev 规则。如果当前版本的 `st-flash` 不支持 `reset`，
+写入完成后请使用探针复位或重新给目标板上电。
+
+GDB 调试可以在一个终端启动 OpenOCD：
+
+```bash
+openocd -f interface/stlink.cfg -f target/stm32h7x.cfg
+```
+
+然后在另一个终端连接：
+
+```text
+arm-none-eabi-gdb build/Debug/safeMRC_for_DM_firmware.elf
+(gdb) target extended-remote :3333
+(gdb) monitor reset halt
+(gdb) load
+(gdb) monitor reset
+(gdb) continue
+```
+
+VS Code 用户可以安装 Cortex-Debug，并使用下面的可选配置；构建过程不依赖
+VS Code：
+
+```json
+{
+  "name": "SafeMRC (OpenOCD)",
+  "type": "cortex-debug",
+  "request": "launch",
+  "cwd": "${workspaceFolder}",
+  "executable": "${workspaceFolder}/build/Debug/safeMRC_for_DM_firmware.elf",
+  "servertype": "openocd",
+  "configFiles": ["interface/stlink.cfg", "target/stm32h7x.cfg"],
+  "runToEntryPoint": "main"
+}
+```
+
+### CubeMX 重新生成
+
+`safeMRC_for_DM_firmware.ioc` 仍是 MCU、时钟树、GPIO、DMA 和外设配置的唯一
+来源。CubeMX 现在已经在项目中生成 `CMakePresets.json`、
+`cmake/gcc-arm-none-eabi.cmake` 和 `cmake/stm32cubemx/CMakeLists.txt`。
+顶层 `CMakeLists.txt` 使用这些生成文件管理 `Core/` 和 HAL，并补充
+`Common/`、`Devices/` 应用层。
+
+CubeMX 生成的 linker 和 startup 文件会保留作参考，但顶层构建明确使用仓库
+维护的 GCC startup 和 linker，因为固件需要把 DMA 缓冲区放到独立的
+`RAM_D2` 段。不要删除 `cmake/STM32H723VGHx.ld` 或
+`startup/startup_stm32h723xx_gcc.s`。
+
+每次 CubeMX 生成代码后都要：
+
+1. 生成前启用备份和保留用户代码选项。
+2. 检查 `git diff`，将生成改动范围限制在 CubeMX 管理的 `Core/`、`Drivers/`、
+   `cmake/stm32cubemx/`、preset 和工具链文件。
+3. 使用 `cmake --preset Debug` 重新配置，并分别编译 `RS485` 与 `CAN` 后端。
+4. 检查 MAP 文件，再烧录并完成硬件冒烟测试后提交。
+
+Keil 备用工程仍可使用：
+
+```text
 MDK-ARM/safeMRC_for_DM_firmware.uvprojx
 
-# 2. 编译 (Keil 中按 F7)
-# 3. 通过 ST-Link 烧录 (Download 按钮或 STM32CubeProgrammer)
+# 在 Keil 中按 F7 编译，并通过 Keil 调试器或 STM32CubeProgrammer 烧录。
 ```
 
 ### Python 上位机
@@ -106,9 +215,11 @@ scripts/        PC 端 Python 上位机 + SDK
 
 1. Fork 本仓库
 2. 创建特性分支 (`git checkout -b feature/my-feature`)
-3. 提交更改 (`git commit -am 'Add my feature'`)
+3. 按照[提交信息规范](dev_docs/standards/commit-message.md)提交更改，包含 `TYPE:`、`WHY:`、`WHAT:`、`TEST:`
 4. 推送分支 (`git push origin feature/my-feature`)
 5. 发起 Pull Request
+
+开发工作文档、迁移记录和协作规范统一从 [dev_docs](dev_docs/README.md) 查阅。
 
 ## 许可证
 

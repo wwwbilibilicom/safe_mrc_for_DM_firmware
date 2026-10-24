@@ -55,11 +55,11 @@ Do not delete or rewrite `MDK-ARM/` files.
 
 Open the project in CubeMX, enable the option that backs up the previous generated result, and confirm that `Keep User Code` remains enabled. The current `.ioc` has `DeletePrevious=true` and `BackupPrevious=false`; do not generate until backup is enabled or the baseline commit is confirmed.
 
-- [ ] **Step 2: Select the CMake toolchain.**
+- [x] **Step 2: Select the CMake toolchain.**
 
 In `Project Manager -> Toolchain / IDE`, select `CMake` and generate code. Do not hand-edit the unknown CubeMX toolchain enum; let CubeMX write it.
 
-- [ ] **Step 3: Review generated changes.**
+- [x] **Step 3: Review generated changes.**
 
 Run:
 
@@ -69,7 +69,7 @@ git diff --stat
 git diff -- safeMRC_for_DM_firmware.ioc
 ```
 
-Expected: `TargetToolchain` changes from the Keil target to CubeMX's CMake target, while MCU/peripheral settings remain unchanged. If CubeMX rewrites application logic outside `USER CODE` blocks, restore it from the baseline and keep the regeneration diff focused.
+Expected: `TargetToolchain=CMake` while MCU/peripheral settings remain unchanged. This generation also added the CubeMX CMake preset, toolchain, linker, startup, and `syscalls.c`/`sysmem.c` files. The current `.ioc` still has `BackupPrevious=false`; enable backup before the next regeneration.
 
 - [ ] **Step 4: Commit only the intentional CubeMX transition.**
 
@@ -233,7 +233,7 @@ Expected: both configurations compile and link, producing ELF/HEX/BIN/MAP artifa
 
 ### Execution status
 
-The GCC build layer now produces Debug ELF/HEX/BIN/MAP artifacts for both RS485 and CAN. The CubeMX target switch remains pending because this environment has no X11 display; do it in the CubeMX UI after opening the project on a graphical Linux or Windows host. Do not hand-edit `ProjectManager.TargetToolchain`.
+CubeMX has now generated the CMake input in this project: `CMakePresets.json`, `cmake/gcc-arm-none-eabi.cmake`, `cmake/stm32cubemx/CMakeLists.txt`, `STM32H723XG_FLASH.ld`, and `startup_stm32h723xx.s`. The top-level CMake consumes the generated Core/HAL source target and adds the hand-maintained Common/Devices application layer. The maintained linker and startup remain selected because the generated defaults do not preserve the firmware's RAM_D2 DMA placement and generated startup calls the unavailable `ExitRun0Mode` symbol.
 
 Run:
 
@@ -251,19 +251,19 @@ git commit -m "build: make firmware headers GCC-compatible"
 - Update: `README.md`
 - Update: `README_CN.md`
 
-- [ ] **Step 1: Add an OpenOCD flash target.**
+- [x] **Step 1: Add an OpenOCD flash target.**
 
 Use the generated ELF or BIN and fail if `openocd` is unavailable. The command must reset and verify the image; it must not erase unrelated flash sectors by default.
 
-- [ ] **Step 2: Add an ST-LINK fallback command.**
+- [x] **Step 2: Add an ST-LINK fallback command.**
 
 Use `st-flash write <bin> 0x08000000` followed by reset where supported. Document that ST-LINK tools may need udev permissions on Linux.
 
-- [ ] **Step 3: Add GDB debug configuration.**
+- [x] **Step 3: Add GDB debug configuration.**
 
 Document the `arm-none-eabi-gdb` + OpenOCD server sequence and provide an optional VS Code Cortex-Debug configuration without making VS Code a build dependency.
 
-- [ ] **Step 4: Document CubeMX regeneration and build commands.**
+- [x] **Step 4: Document CubeMX regeneration and build commands.**
 
 Update both READMEs with:
 
