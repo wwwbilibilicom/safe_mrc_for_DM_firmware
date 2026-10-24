@@ -96,6 +96,7 @@ SECTIONS
   /* newlib's nosys sbrk stub uses this traditional heap boundary symbol. */
   end = _ebss;
   _end = end;
+  __heap_end__ = ORIGIN(AXI_SRAM) + LENGTH(AXI_SRAM);
 
   .RAM_D2 (NOLOAD) :
   {
