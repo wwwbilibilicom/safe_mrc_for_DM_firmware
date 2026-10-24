@@ -1,0 +1,113 @@
+name: Firmware CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.backend }} / ${{ matrix.config }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [RS485, CAN]
+        config: [Debug, Release]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install ARM build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            gcc-arm-none-eabi \
+            binutils-arm-none-eabi
+
+      - name: Check shell scripts
+        run: bash -n scripts/build.sh scripts/flash_openocd.sh scripts/flash_stlink.sh
+
+      - name: Build firmware
+        run: |
+          scripts/build.sh \
+            --backend "${{ matrix.backend }}" \
+            --config "${{ matrix.config }}" \
+            --full \
+            --jobs 2
+
+      - name: Verify firmware outputs
+        env:
+          BUILD_DIR: build/${{ matrix.backend }}-${{ matrix.config }}
+        run: |
+          set -euo pipefail
+          for artifact in elf hex bin map; do
+            path="$BUILD_DIR/safeMRC_for_DM_firmware.$artifact"
+            test -s "$path"
+            echo "verified: $path"
+          done
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.backend }}-${{ matrix.config }}
+          retention-days: 14
+          path: |
+            build/${{ matrix.backend }}-${{ matrix.config }}/safeMRC_for_DM_firmware.elf
+            build/${{ matrix.backend }}-${{ matrix.config }}/safeMRC_for_DM_firmware.hex
+            build/${{ matrix.backend }}-${{ matrix.config }}/safeMRC_for_DM_firmware.bin
+            build/${{ matrix.backend }}-${{ matrix.config }}/safeMRC_for_DM_firmware.map
+
+  release:
+    name: Publish GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download RS485 Release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-RS485-Release
+          path: release-assets/RS485-Release
+
+      - name: Download CAN Release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-CAN-Release
+          path: release-assets/CAN-Release
+
+      - name: Rename release files
+        run: |
+          set -euo pipefail
+          for backend in RS485 CAN; do
+            source_dir="release-assets/${backend}-Release"
+            for extension in elf hex bin map; do
+              source="$source_dir/safeMRC_for_DM_firmware.$extension"
+              destination="release-assets/safeMRC-${backend}-Release.$extension"
+              test -s "$source"
+              mv "$source" "$destination"
+            done
+          done
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --generate-notes \
+            release-assets/safeMRC-*
